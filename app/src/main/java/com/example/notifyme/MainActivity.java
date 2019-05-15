@@ -25,12 +25,15 @@ public class MainActivity extends AppCompatActivity {
     private static final int NOTIFICATION_ID = 0;
     private static final String ACTION_UPDATE_NOTIFICATION =
             "com.example.notifyme.ACTION_UPDATE_NOTIFICATION";
+    private static final String ACTION_DISMISS_NOTIFICATION =
+            "com.example.notifyme.ACTION_DISMISS_NOTIFICATION";
 
     private Button button_notify;
     private Button button_update;
     private Button button_cancel;
     private NotificationManager mNotificationManager;
     private NotificationReceiver mNotificationReceiver;
+    private NotificationSwipeReceiver mNotificationSwipeReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +70,9 @@ public class MainActivity extends AppCompatActivity {
 
         mNotificationReceiver = new NotificationReceiver();
         registerReceiver(mNotificationReceiver, new IntentFilter(ACTION_UPDATE_NOTIFICATION));
+
+        mNotificationSwipeReceiver = new NotificationSwipeReceiver();
+        registerReceiver(mNotificationSwipeReceiver, new IntentFilter(ACTION_DISMISS_NOTIFICATION));
     }
 
     @Override
@@ -95,25 +101,28 @@ public class MainActivity extends AppCompatActivity {
         Bitmap notificationBigImage = BitmapFactory.decodeResource(getResources()
                                         , R.drawable.mascot_1);
 
+        PendingIntent dismissPendingIntent = getPendingIntent(ACTION_DISMISS_NOTIFICATION, NOTIFICATION_ID);
+
         NotificationCompat.Builder notificationBuilder = getNotificationBuilder();
         notificationBuilder.setStyle(new NotificationCompat.BigPictureStyle()
                                         .bigPicture(notificationBigImage)
-                                        .setBigContentTitle("Notification Updated!"));
+                                        .setBigContentTitle("Notification Updated!"))
+                            .setDeleteIntent(dismissPendingIntent);
 
         mNotificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
     }
 
     private void sendNotification() {
-        Intent updateIntent = new Intent(ACTION_UPDATE_NOTIFICATION);
-
-        PendingIntent updatePendingIntent = PendingIntent.getBroadcast(this
-                , NOTIFICATION_ID, updateIntent, PendingIntent.FLAG_ONE_SHOT);
-
         setNotificationButtonState(false, true, true);
+
+        PendingIntent updatePendingIntent = getPendingIntent(ACTION_UPDATE_NOTIFICATION, NOTIFICATION_ID);
+
+        PendingIntent dismissPendingIntent = getPendingIntent(ACTION_DISMISS_NOTIFICATION, NOTIFICATION_ID);
 
         NotificationCompat.Builder notificationBuilder = getNotificationBuilder();
 
-        notificationBuilder.addAction(R.drawable.ic_update, "Update Notification", updatePendingIntent);
+        notificationBuilder.addAction(R.drawable.ic_update, "Update Notification", updatePendingIntent)
+                            .setDeleteIntent(dismissPendingIntent);
 
         mNotificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
     }
@@ -159,5 +168,18 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             updateNotification();
         }
+    }
+
+    public class NotificationSwipeReceiver extends  BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            setNotificationButtonState(true, false, false);
+        }
+    }
+
+    private PendingIntent getPendingIntent(String action, int id) {
+        Intent mIntent = new Intent(action);
+        return PendingIntent.getBroadcast(this, id, mIntent, PendingIntent.FLAG_ONE_SHOT);
     }
 }
